@@ -1,0 +1,56 @@
+:root {
+  --green-50: #effee7;
+  --green-100: #e0f8d4;
+  --green-200: #c2efab;
+  --green-300: #a2e67e;
+  --green-400: #87de57;
+  --green-500: #75d940;
+  --green-600: #6bd731;
+  --green-700: #59be23;
+  --green-800: #4da91b;
+  --green-900: #3d920c;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--green-50);
+}
+
+h1 {
+  font-size: 2.25rem; /* 36px */
+  line-height: 2.5rem; /* 40px */
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.875rem; /* 30px */
+  line-height: 2.25rem; /* 36px */
+  font-weight: 700;
+}
+
+button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  border: 1px solid #1d1c1d4d;
+  font-weight: 700;
+  background: #fff;
+  font-size: 13px;
+  border-radius: 4px;
+  color: rgb(29, 28, 29);
+  height: 28px;
+  transition: all 80ms linear;
+}
+
+button:hover {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 8%);
+  background: rgba(248, 248, 248, 1);
+}
