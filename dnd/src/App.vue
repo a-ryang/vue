@@ -51,93 +51,93 @@ function handleAddChild(parent: Parent) {
 
 // 드래그 중인 항목과 그 위치 정보를 저장하는 변수
 let draggedItem: Child | null = null // 드래그 중인 항목
-let originalChapterIndex: number | null = null // 드래그 시작한 챕터의 인덱스
-let originalItemIndex: number | null = null // 드래그 시작한 항목의 인덱스
-let placeholderPosition: { chapterIndex: number; itemIndex: number } | null = null // 드래그 중인 항목의 잠재적인 새 위치
+let originalPrentIndex: number | null = null // 드래그 시작한 부모의 인덱스
+let originalChildIndex: number | null = null // 드래그 시작한 자식의 인덱스
+let placeholderPosition: { parentIndex: number; childIndex: number } | null = null // 드래그 중인 자식의 잠재적인 새 위치
 
 /**
  * 드래그 시작시 호출되는 함수
  * 항목을 드래그하기 시작할때 호출됨
  */
-function handleDragStart(chapterIndex: number, itemIndex: number) {
+function handleDragStart(parentIndex: number, childIndex: number) {
   // 드래그 중인 항목과 그 위치 정보를 저장
-  draggedItem = parents.value[chapterIndex].items[itemIndex]
-  originalChapterIndex = chapterIndex
-  originalItemIndex = itemIndex
-  placeholderPosition = { chapterIndex, itemIndex }
+  draggedItem = parents.value[parentIndex].items[childIndex]
+  originalPrentIndex = parentIndex
+  originalChildIndex = childIndex
+  placeholderPosition = { parentIndex, childIndex }
 }
 
 /** 드래그 중인 항목이 새로운 위치 위에 있을 때마다 호출 */
-function handleDragOver(targetChapterIndex: number, targetItemIndex: number) {
+function handleDragOver(targetParentIndex: number, targetChildIndex: number) {
   // 드래그 중인 항목이 없거나 시작 위치 정보가 없다면 리턴
-  if (!draggedItem || originalChapterIndex === null || originalItemIndex === null) return
+  if (!draggedItem || originalPrentIndex === null || originalChildIndex === null) return
 
   // 드래그 중인 항목이 같은 위치에 있으면 위치 업데이트 X
   if (
     placeholderPosition &&
-    placeholderPosition.chapterIndex === targetChapterIndex &&
-    placeholderPosition.itemIndex === targetItemIndex
+    placeholderPosition.parentIndex === targetParentIndex &&
+    placeholderPosition.childIndex === targetChildIndex
   ) {
     return
   }
 
   // 드래그 중인 항목의 잠재적인 새 위치 업데이트
-  placeholderPosition = { chapterIndex: targetChapterIndex, itemIndex: targetItemIndex }
+  placeholderPosition = { parentIndex: targetParentIndex, childIndex: targetChildIndex }
 
   // 다른 챕터로 이동하는 경우 처리
-  if (originalChapterIndex !== targetChapterIndex) {
+  if (originalPrentIndex !== targetParentIndex) {
     // 원래 챕터에서 항목 제거
-    let originalItems = [...parents.value[originalChapterIndex].items]
-    originalItems.splice(originalItemIndex, 1)
-    parents.value[originalChapterIndex].items = originalItems
+    let originalItems = [...parents.value[originalPrentIndex].items]
+    originalItems.splice(originalChildIndex, 1)
+    parents.value[originalPrentIndex].items = originalItems
 
     // 새 챕터에 항목 추가
-    let targetItems = [...parents.value[targetChapterIndex].items]
-    targetItems.splice(targetItemIndex, 0, draggedItem)
-    parents.value[targetChapterIndex].items = targetItems
+    let targetItems = [...parents.value[targetParentIndex].items]
+    targetItems.splice(targetChildIndex, 0, draggedItem)
+    parents.value[targetParentIndex].items = targetItems
 
     // 드래그 중인 항목의 원래 위치 정보를 업데이트
-    originalChapterIndex = targetChapterIndex
-    originalItemIndex = targetItemIndex
+    originalPrentIndex = targetParentIndex
+    originalChildIndex = targetChildIndex
     return
   }
 
   // 같은 챕터 내에서 이동하는 경우 처리
-  let newItems = [...parents.value[targetChapterIndex].items]
-  newItems.splice(originalItemIndex, 1) // 원래 위치에서 항목 제거
-  newItems.splice(targetItemIndex, 0, draggedItem) // 새 위치에 항목 삽입
-  parents.value[targetChapterIndex].items = newItems
+  let newItems = [...parents.value[targetParentIndex].items]
+  newItems.splice(originalChildIndex, 1) // 원래 위치에서 항목 제거
+  newItems.splice(targetChildIndex, 0, draggedItem) // 새 위치에 항목 삽입
+  parents.value[targetParentIndex].items = newItems
 
   // 드래그 중인 항목의 원래 위치 정보를 업데이트
-  originalItemIndex = targetItemIndex
+  originalChildIndex = targetChildIndex
 }
 
 /**
  * 드롭 영역에 항목을 놓았을 때 호출되는 함수
  * 항목을 새 위치에 놓았을 때 이 함수가 호출
  */
-function handleDropItem(targetChapterIndex: number) {
+function handleDropItem(targetParentIndex: number) {
   // 드래그 중인 항목이 없거나 시작 위치 정보가 없는 경우 함수를 종료
-  if (!draggedItem || originalChapterIndex === null || originalItemIndex === null) {
+  if (!draggedItem || originalPrentIndex === null || originalChildIndex === null) {
     return
   }
 
   // 같은 챕터 내에서의 이동이 아닌 경우, 원래 챕터에서 항목 제거
-  if (originalChapterIndex !== targetChapterIndex) {
-    parents.value[originalChapterIndex].items.splice(originalItemIndex, 1)
+  if (originalPrentIndex !== targetParentIndex) {
+    parents.value[originalPrentIndex].items.splice(originalChildIndex, 1)
   }
 
   // 새 위치에 항목 삽입
-  const newItemIndex =
-    placeholderPosition && placeholderPosition.itemIndex !== null
-      ? placeholderPosition.itemIndex
-      : parents.value[targetChapterIndex].items.length
-  parents.value[targetChapterIndex].items.splice(newItemIndex, 0, draggedItem)
+  const newchildIndex =
+    placeholderPosition && placeholderPosition.childIndex !== null
+      ? placeholderPosition.childIndex
+      : parents.value[targetParentIndex].items.length
+  parents.value[targetParentIndex].items.splice(newchildIndex, 0, draggedItem)
 
   // 같은 챕터 내에서의 이동인 경우, 원래 위치에서 항목 제거
-  if (originalChapterIndex === targetChapterIndex) {
-    parents.value[targetChapterIndex].items.splice(
-      originalItemIndex < newItemIndex ? originalItemIndex : originalItemIndex + 1,
+  if (originalPrentIndex === targetParentIndex) {
+    parents.value[targetParentIndex].items.splice(
+      originalChildIndex < newchildIndex ? originalChildIndex : originalChildIndex + 1,
       1
     )
   }
@@ -150,11 +150,11 @@ function handleDropItem(targetChapterIndex: number) {
  * 챕터 내에서 항목을 드롭했을 때 호출되는 함수
  * 같은 챕터 내에서 항목을 새 위치에 놓았을 때 이 함수가 호출됨
  */
-function handleDropItemInsideChapter(targetChapterIndex: number, targetItemIndex: number) {
+function handleDropItemInsideChapter(targetParentIndex: number, targetChildIndex: number) {
   // 드래그 중인 항목이 있고, 같은 챕터 내에서의 이동이면
-  if (draggedItem && originalChapterIndex === targetChapterIndex) {
-    parents.value[targetChapterIndex].items.splice(originalItemIndex!, 1) // 원래 위치에서 항목을 제거
-    parents.value[targetChapterIndex].items.splice(targetItemIndex, 0, draggedItem) // 새 위치에 항목을 삽입
+  if (draggedItem && originalPrentIndex === targetParentIndex) {
+    parents.value[targetParentIndex].items.splice(originalChildIndex!, 1) // 원래 위치에서 항목을 제거
+    parents.value[targetParentIndex].items.splice(targetChildIndex, 0, draggedItem) // 새 위치에 항목을 삽입
     clearDragState()
   }
 }
@@ -165,20 +165,20 @@ function handleDropItemInsideChapter(targetChapterIndex: number, targetItemIndex
  */
 function clearDragState() {
   draggedItem = null
-  originalChapterIndex = null
-  originalItemIndex = null
+  originalPrentIndex = null
+  originalChildIndex = null
   placeholderPosition = null
 }
 
 /**
  * 현재 위치가 드래그 중인 항목의 잠재적인 새 위치인지 확인하는 함수
  */
-function isPlaceholder(chapterIndex: number, itemIndex: number) {
+function isPlaceholder(parentIndex: number, childIndex: number) {
   // placeholderPosition이 유효하고, 현재 위치가 잠재적인 새 위치와 일치하면 true를 반환
   return (
     placeholderPosition &&
-    placeholderPosition.chapterIndex === chapterIndex &&
-    placeholderPosition.itemIndex === itemIndex
+    placeholderPosition.parentIndex === parentIndex &&
+    placeholderPosition.childIndex === childIndex
   )
 }
 </script>
@@ -200,14 +200,14 @@ function isPlaceholder(chapterIndex: number, itemIndex: number) {
         <h3>{{ parent.title }}</h3>
         <ul class="child-list">
           <li
-            v-for="(item, itemIndex) in parent.items"
+            v-for="(item, childIndex) in parent.items"
             :key="item.id"
             draggable="true"
             class="child"
-            :class="{ placeholder: isPlaceholder(parentIndex, itemIndex) }"
-            @dragstart="handleDragStart(parentIndex, itemIndex)"
-            @dragover.prevent="handleDragOver(parentIndex, itemIndex)"
-            @drop="handleDropItemInsideChapter(parentIndex, itemIndex)"
+            :class="{ placeholder: isPlaceholder(parentIndex, childIndex) }"
+            @dragstart="handleDragStart(parentIndex, childIndex)"
+            @dragover.prevent="handleDragOver(parentIndex, childIndex)"
+            @drop="handleDropItemInsideChapter(parentIndex, childIndex)"
           >
             <h4>{{ item.title }}</h4>
           </li>
