@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 
 /**
  * 기본적으로는 브라우저는 HTML 요소에 뭔가를 드롭했을 때 아무 일도 일어나지 않도록 합니다.
@@ -119,9 +119,13 @@ function reorderChildWithinParent(parentId: string, draggedCId: string, targetCI
   parent.childs.splice(targetIndex, 0, draggedChild)
 }
 
-function handleDragEnd(e: DragEvent) {
-  if (!e.dataTransfer || !(e.target instanceof HTMLElement)) return
+function handleDragEnd() {
   if (!currentDragTarget.value) return
+  currentDragTarget.value = null
+}
+
+// 클릭후 드래그 하지 않고 마우스를 바로 놓았을때
+function handleMouseUp() {
   currentDragTarget.value = null
 }
 
@@ -139,8 +143,8 @@ function isDraggable(cId: string) {
           v-for="p of parents"
           :key="p.id"
           class="parent"
-          @dragover.prevent="(e) => handleDragOver(p.id)"
-          @drop.prevent
+          @dragover.prevent="handleDragOver(p.id)"
+          @drop.prevent="handleDragEnd"
         >
           <section>
             <header>
@@ -157,6 +161,7 @@ function isDraggable(cId: string) {
                   :draggable="isDraggable(c.id)"
                   @dragstart="handleDragStart"
                   @dragover.prevent="handleDragOver(p.id, c.id)"
+                  @mouseup="handleMouseUp"
                   @dragend="handleDragEnd"
                 >
                   <section>
