@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-/**
- * 기본적으로는 브라우저는 HTML 요소에 뭔가를 드롭했을 때 아무 일도 일어나지 않도록 합니다.
- * 특정 요소가 드롭 지역 혹은 droppable로 만들기 위해서는 해당 요소가
- * ondragover (en-US)와 ondrop (en-US) 이벤트 핸들러 속성을 가져야합니다.
- */
-
 interface Child {
   id: string
   title: string
@@ -20,21 +14,21 @@ interface Parent {
 
 const parents = ref<Parent[]>([
   {
-    id: '1',
+    id: crypto.randomUUID(),
     title: 'Parent 1',
     childs: [
-      { id: '101', title: 'Child 1.1' },
-      { id: '102', title: 'Child 1.2' },
-      { id: '103', title: 'Child 1.3' }
+      { id: crypto.randomUUID(), title: 'Child 1.1' },
+      { id: crypto.randomUUID(), title: 'Child 1.2' },
+      { id: crypto.randomUUID(), title: 'Child 1.3' }
     ]
   },
   {
-    id: '2',
+    id: crypto.randomUUID(),
     title: 'Parent 2',
     childs: []
   },
   {
-    id: '3',
+    id: crypto.randomUUID(),
     title: 'Parent 3',
     childs: []
   }
@@ -56,81 +50,99 @@ function handleAddChild(parent: Parent) {
 }
 
 // dnd -------------------------------------------------------------------
-const currentDragTarget = ref<{ pId: string; cId: string } | null>(null)
+const draggingContext = ref<{ draggingParentId: string; draggingChildId: string } | null>(null)
 
-function handleDrag(pId: string, cId: string) {
-  currentDragTarget.value = { pId, cId }
+function handleDrag(parentId: string, childId: string) {
+  draggingContext.value = { draggingParentId: parentId, draggingChildId: childId }
 }
 
 function handleDragStart(e: DragEvent) {
-  if (!e.dataTransfer || !(e.target instanceof HTMLElement)) return
-  e.dataTransfer.effectAllowed = 'move' // 드래그 작업에 허용되는 효과를 지정
+  if (!e.dataTransfer) return
+  e.dataTransfer.effectAllowed = 'move' // 드래그 중일때 커서의 모양을 move로 지정
 }
 
-function handleDragOver(targetParentId: string, targetCId?: string) {
-  if (!currentDragTarget.value) return
+function handleDragOver(dragOverParentId: string, dragOverChildId?: string) {
+  if (!draggingContext.value) return
 
-  const { pId: draggedParentId, cId: draggedCId } = currentDragTarget.value
+  const { draggingParentId, draggingChildId } = draggingContext.value
 
-  // 드래그 중인 child가 다른 부모 요소 위에 있는 경우
-  if (draggedParentId !== targetParentId) {
-    moveChildToDifferentParent(draggedParentId, targetParentId, draggedCId)
-  } else if (targetCId) {
-    // 같은 부모 내에서 다른 위치로 이동하는 경우
-    reorderChildWithinParent(draggedParentId, draggedCId, targetCId)
+  // 같은 parent 내에서 이동하는 경우
+  if (draggingParentId === dragOverParentId) {
+    reorderChild({
+      parentId: draggingParentId,
+      draggingChildId,
+      targetChildId: dragOverChildId!
+    })
+    return
   }
+
+  // 다른 parent로 이동하는 경우
+  moveToAnotherParent({
+    oldParentId: draggingParentId,
+    newParentId: dragOverParentId,
+    draggingChildId
+  })
 }
 
-function moveChildToDifferentParent(
-  draggedParentId: string,
-  targetParentId: string,
-  draggedCId: string
-) {
-  // 다른 부모로 이동하는 로직 구현
-  const draggedParent = parents.value.find((p) => p.id === draggedParentId)
-  const targetParent = parents.value.find((p) => p.id === targetParentId)
-
-  if (!draggedParent || !targetParent) return
-
-  const draggedChildIdx = draggedParent.childs.findIndex((c) => c.id === draggedCId)
-  if (draggedChildIdx === -1) return
-
-  // 드래그 중인 child를 원래 부모에서 제거하고 새로운 부모에 추가
-  const [draggedChild] = draggedParent.childs.splice(draggedChildIdx, 1)
-  targetParent.childs.push(draggedChild)
-
-  if (currentDragTarget.value) {
-    currentDragTarget.value.pId = targetParent.id
-  }
+interface ReorderChild {
+  parentId: string
+  draggingChildId: string
+  targetChildId: string
 }
 
-function reorderChildWithinParent(parentId: string, draggedCId: string, targetCId: string) {
-  // 같은 부모 내에서 재정렬
+function reorderChild({ parentId, draggingChildId, targetChildId }: ReorderChild) {
   const parent = parents.value.find((p) => p.id === parentId)
   if (!parent) return
 
-  const draggedIndex = parent.childs.findIndex((c) => c.id === draggedCId)
-  const targetIndex = parent.childs.findIndex((c) => c.id === targetCId)
+  const draggingChildIndex = parent.childs.findIndex((c) => c.id === draggingChildId)
+  const targetChildIndex = parent.childs.findIndex((c) => c.id === targetChildId)
 
-  if (draggedIndex < 0 || targetIndex < 0 || draggedIndex === targetIndex) return
+  // 찾을 수 없다면(-1) 종료
+  if (draggingChildIndex < 0 || targetChildIndex < 0) return
+  // 같은 위치 드래그라면 종료
+  if (draggingChildIndex === targetChildIndex) return
 
-  // 드래그 중인 child를 새로운 위치로 이동
-  const [draggedChild] = parent.childs.splice(draggedIndex, 1)
-  parent.childs.splice(targetIndex, 0, draggedChild)
+  // 드래그중인 child를 새로운 위치로 재정렬
+  const [draggingChild] = parent.childs.splice(draggingChildIndex, 1)
+  parent.childs.splice(targetChildIndex, 0, draggingChild)
+}
+
+interface MoveToAnotherParent {
+  oldParentId: string
+  newParentId: string
+  draggingChildId: string
+}
+
+function moveToAnotherParent({ oldParentId, newParentId, draggingChildId }: MoveToAnotherParent) {
+  const oldParent = parents.value.find((p) => p.id === oldParentId)
+  const newParent = parents.value.find((p) => p.id === newParentId)
+  if (!oldParent || !newParent) return
+
+  const oldParentChilds = oldParent.childs
+  const draggingChildIndex = oldParentChilds.findIndex((c) => c.id === draggingChildId)
+
+  if (draggingChildIndex < 0) return
+
+  const [draggingChild] = oldParentChilds.splice(draggingChildIndex, 1)
+  newParent.childs.push(draggingChild)
+
+  // 드래그 중인 parent id 업데이트
+  if (draggingContext.value) {
+    draggingContext.value.draggingParentId = newParentId
+  }
 }
 
 function handleDragEnd() {
-  if (!currentDragTarget.value) return
-  currentDragTarget.value = null
+  draggingContext.value = null
 }
 
 // 클릭후 드래그 하지 않고 마우스를 바로 놓았을때
 function handleMouseUp() {
-  currentDragTarget.value = null
+  draggingContext.value = null
 }
 
-function isDraggable(cId: string) {
-  return currentDragTarget.value?.cId === cId
+function isDraggable(childId: string) {
+  return draggingContext.value?.draggingChildId === childId
 }
 </script>
 
@@ -140,11 +152,10 @@ function isDraggable(cId: string) {
       <!-- 부모 리스트 -->
       <ul class="parent-list">
         <li
-          v-for="p of parents"
+          v-for="p in parents"
           :key="p.id"
           class="parent"
           @dragover.prevent="handleDragOver(p.id)"
-          @drop.prevent="handleDragEnd"
         >
           <section>
             <header>
@@ -153,7 +164,7 @@ function isDraggable(cId: string) {
             <div>
               <ul class="child-list">
                 <li
-                  v-for="c of p.childs"
+                  v-for="c in p.childs"
                   :key="c.id"
                   :id="`drag-${c.id}`"
                   class="child"
@@ -161,11 +172,11 @@ function isDraggable(cId: string) {
                   :draggable="isDraggable(c.id)"
                   @dragstart="handleDragStart"
                   @dragover.prevent="handleDragOver(p.id, c.id)"
-                  @mouseup="handleMouseUp"
                   @dragend="handleDragEnd"
+                  @mouseup="handleMouseUp"
                 >
                   <section>
-                    <header @mousedown="handleDrag(p.id, c.id)" @touch="handleDrag(p.id, c.id)">
+                    <header @mousedown="handleDrag(p.id, c.id)">
                       <h1>{{ c.title }}</h1>
                     </header>
                     <div>child content</div>
